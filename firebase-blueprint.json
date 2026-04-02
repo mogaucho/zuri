@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with balance and socket ID.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "balance": { "type": "number" },
+        "socketId": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["userId", "balance"]
+    },
+    "Trade": {
+      "title": "Trade",
+      "description": "A single trade record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "direction": { "type": "string", "enum": ["buy", "sell"] },
+        "amount": { "type": "number" },
+        "entry": { "type": "number" },
+        "status": { "type": "string", "enum": ["open", "closed", "pending"] },
+        "roundId": { "type": "number" },
+        "stopLoss": { "type": "number" },
+        "takeProfit": { "type": "number" },
+        "pattern": { "type": "string" },
+        "orderType": { "type": "string", "enum": ["market", "limit", "stop"] },
+        "targetPrice": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "direction", "amount", "entry", "status", "roundId"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A deposit or withdrawal transaction.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "phone": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed"] },
+        "type": { "type": "string", "enum": ["demo_deposit", "mpesa_deposit"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "error": { "type": "string" }
+      },
+      "required": ["userId", "amount", "status", "type"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    },
+    "trades/{tradeId}": {
+      "schema": "Trade",
+      "description": "Collection of all trades."
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Collection of all financial transactions."
+    }
+  }
+}

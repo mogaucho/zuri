@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'balance', 'socketId', 'role']) &&
+             data.userId is string &&
+             data.balance is number &&
+             data.socketId is string &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "mosesmwai20@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidTrade(data) {
+      return data.keys().hasAll(['userId', 'direction', 'amount', 'entry', 'status', 'roundId']) &&
+             data.userId is string &&
+             data.direction in ['buy', 'sell'] &&
+             data.amount is number &&
+             data.entry is number &&
+             data.status in ['open', 'closed', 'pending'] &&
+             data.roundId is number &&
+             (!('stopLoss' in data) || data.stopLoss is number || data.stopLoss == null) &&
+             (!('takeProfit' in data) || data.takeProfit is number || data.takeProfit == null) &&
+             (!('pattern' in data) || data.pattern is string) &&
+             (!('orderType' in data) || data.orderType in ['market', 'limit', 'stop']) &&
+             (!('targetPrice' in data) || data.targetPrice is number || data.targetPrice == null);
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'amount', 'status', 'type']) &&
+             data.userId is string &&
+             data.amount is number &&
+             data.status in ['pending', 'completed', 'failed'] &&
+             data.type in ['demo_deposit', 'mpesa_deposit'];
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+    }
+
+    match /trades/{tradeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTrade(request.resource.data);
+      allow update: if isAuthenticated() && isValidTrade(request.resource.data);
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidTransaction(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isAdmin(); // Only admin can update transaction status
+    }
+  }
+}
