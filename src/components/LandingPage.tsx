@@ -1,10 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { TrendingUp, Shield, Zap, Globe, ArrowRight, BarChart3, Users } from 'lucide-react';
 
 interface LandingPageProps {
   onStart: () => void;
 }
+
+const MarketTicker = () => {
+  const [data, setData] = useState(Array.from({ length: 25 }).map((_, i) => ({
+    id: i,
+    pair: ["EUR/USD", "GBP/USD", "USD/JPY", "BTC/USD", "ETH/USD", "GOLD", "OIL"][Math.floor(Math.random() * 7)],
+    price: (1.08 + Math.random() * 100).toFixed(4),
+    change: (Math.random() * 2 - 1).toFixed(2),
+    vol: (Math.random() * 100).toFixed(1),
+    time: new Date().toLocaleTimeString()
+  })));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setData(prev => prev.map(item => ({
+        ...item,
+        price: (parseFloat(item.price) + (Math.random() - 0.5) * 0.01).toFixed(4),
+        time: new Date().toLocaleTimeString()
+      })));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <>
+      {data.map((item) => (
+        <div key={item.id} className="flex justify-between border-b border-slate-500/30 pb-2 text-[10px] font-mono">
+          <span className="animate-pulse w-16">{item.pair}</span>
+          <span className="w-20 text-right">{item.price}</span>
+          <span className={`w-12 text-right ${parseFloat(item.change) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {item.change}%
+          </span>
+          <span className="hidden md:inline w-20 text-right">VOL: {item.vol}M</span>
+          <span className="w-20 text-right">{item.time}</span>
+        </div>
+      ))}
+    </>
+  );
+};
 
 export default function LandingPage({ onStart }: LandingPageProps) {
   return (
@@ -13,6 +51,12 @@ export default function LandingPage({ onStart }: LandingPageProps) {
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 blur-[120px] rounded-full" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full" />
+        
+        {/* Actively Running Market Table Background */}
+        <div className="absolute inset-0 opacity-[0.08] flex flex-col gap-4 p-4 select-none overflow-hidden">
+          <MarketTicker />
+        </div>
+        
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
       </div>
 
@@ -85,9 +129,9 @@ export default function LandingPage({ onStart }: LandingPageProps) {
               <div className="ml-4 h-6 w-64 bg-slate-800 rounded-md" />
             </div>
             <img 
-              src="https://picsum.photos/seed/trading/1200/600" 
-              alt="Trading Interface" 
-              className="rounded-xl w-full grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-700"
+              src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?q=80&w=2070&auto=format&fit=crop" 
+              alt="Professional Trading Terminal" 
+              className="rounded-xl w-full grayscale-0 opacity-90 transition-all duration-1000 object-cover h-[400px]"
               referrerPolicy="no-referrer"
             />
           </div>

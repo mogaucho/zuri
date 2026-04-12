@@ -11,11 +11,14 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['userId', 'balance', 'socketId', 'role']) &&
+      return data.keys().hasAll(['userId', 'balance']) &&
              data.userId is string &&
              data.balance is number &&
-             data.socketId is string &&
-             data.role in ['admin', 'user'];
+             (!('role' in data) || data.role in ['admin', 'user', 'bot']) &&
+             (!('socketId' in data) || data.socketId is string || data.socketId == null) &&
+             (!('name' in data) || data.name is string) &&
+             (!('isDemo' in data) || data.isDemo is bool) &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
     }
 
     function isAdmin() {
@@ -25,18 +28,24 @@ service cloud.firestore {
     }
 
     function isValidTrade(data) {
-      return data.keys().hasAll(['userId', 'direction', 'amount', 'entry', 'status', 'roundId']) &&
+      return data.keys().hasAll(['userId', 'direction', 'amount', 'entry', 'status']) &&
              data.userId is string &&
              data.direction in ['buy', 'sell'] &&
              data.amount is number &&
              data.entry is number &&
              data.status in ['open', 'closed', 'pending'] &&
-             data.roundId is number &&
+             (!('roundId' in data) || data.roundId is number) &&
              (!('stopLoss' in data) || data.stopLoss is number || data.stopLoss == null) &&
              (!('takeProfit' in data) || data.takeProfit is number || data.takeProfit == null) &&
              (!('pattern' in data) || data.pattern is string) &&
              (!('orderType' in data) || data.orderType in ['market', 'limit', 'stop']) &&
-             (!('targetPrice' in data) || data.targetPrice is number || data.targetPrice == null);
+             (!('targetPrice' in data) || data.targetPrice is number || data.targetPrice == null) &&
+             (!('exitPrice' in data) || data.exitPrice is number || data.exitPrice == null) &&
+             (!('closeReason' in data) || data.closeReason is string) &&
+             (!('duration' in data) || data.duration is string) &&
+             (!('executionLatency' in data) || data.executionLatency is number || data.executionLatency == null) &&
+             (!('executedAt' in data) || data.executedAt is timestamp || data.executedAt == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
     }
 
     function isValidTransaction(data) {
@@ -44,26 +53,28 @@ service cloud.firestore {
              data.userId is string &&
              data.amount is number &&
              data.status in ['pending', 'completed', 'failed'] &&
-             data.type in ['demo_deposit', 'mpesa_deposit'];
+             data.type in ['demo_deposit', 'mpesa_deposit'] &&
+             (!('phone' in data) || data.phone is string) &&
+             (!('completedAt' in data) || data.completedAt is timestamp || data.completedAt == null) &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
     }
 
     // Rules
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow create, update: if isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
     }
 
     match /trades/{tradeId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidTrade(request.resource.data);
-      allow update: if isAuthenticated() && isValidTrade(request.resource.data);
+      allow create: if isValidTrade(request.resource.data) && isOwner(request.resource.data.userId);
+      allow update: if isValidTrade(request.resource.data) && (isOwner(resource.data.userId) || isAdmin());
     }
 
     match /transactions/{transactionId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && isValidTransaction(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if isAuthenticated() && isAdmin(); // Only admin can update transaction status
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isValidTransaction(request.resource.data) && isOwner(request.resource.data.userId);
+      allow update: if isValidTransaction(request.resource.data) && (isOwner(resource.data.userId) || isAdmin());
     }
   }
 }
